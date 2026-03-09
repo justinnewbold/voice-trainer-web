@@ -4,9 +4,11 @@ import ScalesScreen from './screens/ScalesScreen.jsx';
 import SongsScreen from './screens/SongsScreen.jsx';
 import ProgressScreen from './screens/ProgressScreen.jsx';
 import HomeScreen from './screens/HomeScreen.jsx';
+import WarmupScreen from './screens/WarmupScreen.jsx';
 
 const NAV = [
   { id: 'home',     label: 'Home',     icon: HomeIcon },
+  { id: 'warmup',   label: 'Warmup',   icon: WarmupIcon },
   { id: 'pitch',    label: 'Pitch',    icon: MicIcon },
   { id: 'scales',   label: 'Scales',   icon: NotesIcon },
   { id: 'songs',    label: 'Songs',    icon: HeadsetIcon },
@@ -21,6 +23,7 @@ export default function App() {
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 72 }}>
         {tab === 'home'     && <HomeScreen onNav={setTab} />}
+        {tab === 'warmup'   && <WarmupScreen />}
         {tab === 'pitch'    && <PitchScreen />}
         {tab === 'scales'   && <ScalesScreen />}
         {tab === 'songs'    && <SongsScreen />}
@@ -44,14 +47,14 @@ export default function App() {
               key={n.id}
               onClick={() => setTab(n.id)}
               style={{
-                flex: 1, padding: '10px 4px 8px', display: 'flex', flexDirection: 'column',
+                flex: 1, padding: '10px 2px 8px', display: 'flex', flexDirection: 'column',
                 alignItems: 'center', gap: 3, transition: 'all 0.2s',
                 color: active ? 'var(--primary-light)' : 'var(--text-3)',
                 background: 'none', border: 'none', cursor: 'pointer',
               }}
             >
               <n.icon size={20} active={active} />
-              <span style={{ fontSize: 10, fontWeight: active ? 700 : 500, letterSpacing: '0.02em' }}>{n.label}</span>
+              <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, letterSpacing: '0.02em' }}>{n.label}</span>
               {active && (
                 <div style={{
                   position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
@@ -72,6 +75,17 @@ function HomeIcon({ size, active }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2}>
       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
       <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  );
+}
+
+function WarmupIcon({ size, active }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2}>
+      <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+      <path d="M8 12s1-2 4-2 4 2 4 2"/>
+      <line x1="9" y1="9" x2="9.01" y2="9"/>
+      <line x1="15" y1="9" x2="15.01" y2="9"/>
     </svg>
   );
 }
