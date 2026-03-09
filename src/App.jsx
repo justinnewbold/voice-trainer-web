@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PitchScreen from './screens/PitchScreen.jsx';
 import ScalesScreen from './screens/ScalesScreen.jsx';
 import SongsScreen from './screens/SongsScreen.jsx';
@@ -6,6 +6,10 @@ import ProgressScreen from './screens/ProgressScreen.jsx';
 import HomeScreen from './screens/HomeScreen.jsx';
 import WarmupScreen from './screens/WarmupScreen.jsx';
 import VocalRangeScreen from './screens/VocalRangeScreen.jsx';
+import OnboardingScreen, { hasCompletedOnboarding } from './screens/OnboardingScreen.jsx';
+import { BrowserNotSupported } from './components/ErrorStates.jsx';
+import { detectAudioSupport } from './utils/audioCompat.js';
+import { downloadExport, importData } from './utils/storage.js';
 
 const NAV = [
   { id: 'home',     label: 'Home',    icon: HomeIcon },
@@ -18,9 +22,15 @@ const NAV = [
 
 export default function App() {
   const [tab, setTab] = useState('home');
+  const [showOnboarding, setShowOnboarding] = useState(() => !hasCompletedOnboarding());
+  const [showSettings, setShowSettings] = useState(false);
+  const [pwaPrompt, setPwaPrompt] = useState(null);
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem('vt_theme') || 'dark'; } catch { return 'dark'; }
   });
+
+  // Check browser support
+  const [audioSupport] = useState(() => detectAudioSupport());
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -28,30 +38,67 @@ export default function App() {
     try { localStorage.setItem('vt_theme', next); } catch {}
   };
 
-  // Apply theme to root
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
   // Notification reminder check
   useEffect(() => {
-    if (Notification?.permission === 'granted' && localStorage.getItem('vt_notifs')) {
-      const last = parseInt(localStorage.getItem('vt_last_practice') || '0');
-      const hoursSince = (Date.now() - last) / 3600000;
-      if (hoursSince > 22) {
-        new Notification('Voice Trainer 🎤', {
-          body: "Time to practice! Your streak is waiting 🔥",
-          icon: '/favicon.ico',
-        });
+    try {
+      if (Notification?.permission === 'granted' && localStorage.getItem('vt_notifs')) {
+        const last = parseInt(localStorage.getItem('vt_last_practice') || '0');
+        const hoursSince = (Date.now() - last) / 3600000;
+        if (hoursSince > 22) {
+          new Notification('Voice Trainer 🎤', {
+            body: "Time to practice! Your streak is waiting 🔥",
+            icon: '/icon-192.png',
+          });
+        }
       }
-    }
-    localStorage.setItem('vt_last_practice', Date.now().toString());
+      localStorage.setItem('vt_last_practice', Date.now().toString());
+    } catch {}
   }, []);
+
+  // PWA install prompt
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setPwaPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallPwa = async () => {
+    if (!pwaPrompt) return;
+    pwaPrompt.prompt();
+    const result = await pwaPrompt.userChoice;
+    if (result.outcome === 'accepted') setPwaPrompt(null);
+  };
+
+  // Browser not supported
+  if (!audioSupport.isFullySupported) {
+    return <BrowserNotSupported />;
+  }
+
+  // Onboarding
+  if (showOnboarding) {
+    return <OnboardingScreen onComplete={() => setShowOnboarding(false)} />;
+  }
+
+  // Settings
+  if (showSettings) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative' }}>
+        <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 72 }}>
+          <SettingsScreen onBack={() => setShowSettings(false)} theme={theme} toggleTheme={toggleTheme} pwaPrompt={pwaPrompt} onInstallPwa={handleInstallPwa} />
+        </div>
+        <BottomNav tab="home" setTab={(t) => { setShowSettings(false); setTab(t); }} theme={theme} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative' }}>
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 72 }}>
-        {tab === 'home'     && <HomeScreen onNav={setTab} theme={theme} toggleTheme={toggleTheme} />}
+        {tab === 'home'     && <HomeScreen onNav={setTab} theme={theme} toggleTheme={toggleTheme} onSettings={() => setShowSettings(true)} pwaPrompt={pwaPrompt} onInstallPwa={handleInstallPwa} />}
         {tab === 'warmup'   && <WarmupScreen />}
         {tab === 'range'    && <VocalRangeScreen />}
         {tab === 'pitch'    && <PitchScreen />}
@@ -59,32 +106,119 @@ export default function App() {
         {tab === 'songs'    && <SongsScreen />}
         {tab === 'progress' && <ProgressScreen />}
       </div>
-
-      <nav style={{
-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '100%', maxWidth: 480,
-        background: theme === 'light' ? 'rgba(255,255,255,0.95)' : 'rgba(13,13,26,0.95)',
-        backdropFilter: 'blur(20px)',
-        borderTop: '1px solid var(--border)',
-        display: 'flex', zIndex: 100,
-      }}>
-        {NAV.map(n => {
-          const active = tab === n.id || (n.id === 'home' && tab === 'range');
-          return (
-            <button key={n.id} onClick={() => setTab(n.id)} style={{
-              flex: 1, padding: '10px 2px 8px', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 3, transition: 'all 0.2s',
-              color: active ? 'var(--primary-light)' : 'var(--text-3)',
-              background: 'none', border: 'none', cursor: 'pointer', position: 'relative',
-            }}>
-              <n.icon size={20} active={active} />
-              <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, letterSpacing: '0.02em' }}>{n.label}</span>
-              {active && <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 28, height: 2, background: 'var(--primary-light)', borderRadius: '0 0 4px 4px' }} />}
-            </button>
-          );
-        })}
-      </nav>
+      <BottomNav tab={tab} setTab={setTab} theme={theme} />
     </div>
+  );
+}
+
+function BottomNav({ tab, setTab, theme }) {
+  return (
+    <nav style={{
+      position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+      width: '100%', maxWidth: 480,
+      background: theme === 'light' ? 'rgba(255,255,255,0.95)' : 'rgba(13,13,26,0.95)',
+      backdropFilter: 'blur(20px)',
+      borderTop: '1px solid var(--border)',
+      display: 'flex', zIndex: 100,
+      paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+    }}>
+      {NAV.map(n => {
+        const active = tab === n.id || (n.id === 'home' && tab === 'range');
+        return (
+          <button key={n.id} onClick={() => setTab(n.id)} style={{
+            flex: 1, padding: '10px 2px 8px', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', gap: 3, transition: 'all 0.2s',
+            color: active ? 'var(--primary-light)' : 'var(--text-3)',
+            background: 'none', border: 'none', cursor: 'pointer', position: 'relative',
+          }}>
+            <n.icon size={20} active={active} />
+            <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, letterSpacing: '0.02em' }}>{n.label}</span>
+            {active && <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 28, height: 2, background: 'var(--primary-light)', borderRadius: '0 0 4px 4px' }} />}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ─── Settings Screen ────────────────────────────────────────────────────────
+function SettingsScreen({ onBack, theme, toggleTheme, pwaPrompt, onInstallPwa }) {
+  const [importStatus, setImportStatus] = useState(null);
+  const fileRef = useRef(null);
+
+  const handleImport = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        importData(ev.target.result);
+        setImportStatus('success');
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        setImportStatus('error');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <div style={{ paddingBottom: 24 }}>
+      <div style={{ padding: '56px 24px 20px', background: 'linear-gradient(160deg, #1a0a35, #080810)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={onBack} style={{ color: 'var(--text-2)', fontSize: 24, background: 'none', border: 'none', cursor: 'pointer' }}>←</button>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>OPTIONS</div>
+            <h2 style={{ fontSize: 24, fontWeight: 900 }}>⚙️ Settings</h2>
+          </div>
+        </div>
+      </div>
+      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <SettingsRow icon={theme === 'dark' ? '🌙' : '☀️'} title={`Theme: ${theme === 'dark' ? 'Dark' : 'Light'}`} sub="Toggle light/dark mode" onClick={toggleTheme} />
+        {pwaPrompt && <SettingsRow icon="📱" title="Install App" sub="Add to your home screen" onClick={onInstallPwa} accent />}
+        <SettingsRow icon="💾" title="Export Data" sub="Download a backup of all your progress" onClick={downloadExport} />
+        <SettingsRow icon="📂" title="Import Data" sub="Restore from a previous backup" onClick={() => fileRef.current?.click()} />
+        <input ref={fileRef} type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
+        {importStatus === 'success' && (
+          <div style={{ background: 'var(--green-dim)', border: '1px solid var(--green)', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: 'var(--green)', fontWeight: 700 }}>
+            ✓ Data imported! Reloading...
+          </div>
+        )}
+        {importStatus === 'error' && (
+          <div style={{ background: 'var(--red-dim)', border: '1px solid var(--red)', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: 'var(--red)', fontWeight: 700 }}>
+            ✕ Invalid backup file.
+          </div>
+        )}
+        <SettingsRow icon="🎓" title="Redo Setup" sub="Run the onboarding tutorial again" onClick={() => {
+          try { localStorage.removeItem('vt_onboarded_v1'); } catch {}
+          window.location.reload();
+        }} />
+        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 16, marginTop: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', marginBottom: 8 }}>About Voice Trainer</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.7 }}>
+            All audio is processed locally on your device — nothing is uploaded. Your data lives in browser local storage. Use Export Data to back it up.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsRow({ icon, title, sub, onClick, accent }) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'flex', alignItems: 'center', gap: 14, padding: 16, width: '100%',
+      background: accent ? 'var(--primary-dim)' : 'var(--card)',
+      border: `1px solid ${accent ? 'var(--primary)' : 'var(--border)'}`,
+      borderRadius: 16, cursor: 'pointer', textAlign: 'left',
+    }}>
+      <div style={{ fontSize: 22, width: 44, height: 44, borderRadius: 12, background: accent ? 'var(--primary)' : 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: accent ? 'var(--primary-light)' : 'var(--text-1)', marginBottom: 2 }}>{title}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{sub}</div>
+      </div>
+      <span style={{ color: 'var(--text-3)', fontSize: 18 }}>›</span>
+    </button>
   );
 }
 

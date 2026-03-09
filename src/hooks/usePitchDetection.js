@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { detectPitch, createSmoother, frequencyToNoteInfo, getPitchStatus, getPitchColor } from '../utils/pitch.js';
+import { requestMicrophone, createAudioContext } from '../utils/audioCompat.js';
 
 // 4096 samples @ 44100 Hz = ~93ms window, giving frequency resolution of ~10.8 Hz
 // Better for low notes (chest voice, bass singers)
@@ -78,19 +79,16 @@ export function usePitchDetection() {
 
   const start = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation:  false,
-          noiseSuppression:  false,
-          autoGainControl:   false,
-          sampleRate:        44100,
-        },
-      });
-
+      const stream = await requestMicrophone();
       streamRef.current = stream;
 
-      const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+      const ctx = await createAudioContext(44100);
       audioCtxRef.current = ctx;
+
+      // Safari may need a resume after user gesture
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
 
       const analyser = ctx.createAnalyser();
       analyser.fftSize = BUFFER_SIZE;
@@ -101,6 +99,11 @@ export function usePitchDetection() {
       source.connect(analyser);
       sourceRef.current = source;
 
+      // Resize buffer if actual sample rate differs (Safari sometimes ignores sampleRate option)
+      if (ctx.sampleRate !== 44100) {
+        bufferRef.current = new Float32Array(BUFFER_SIZE);
+      }
+
       // Reset smoother for fresh session
       smootherRef.current = createSmoother();
 
@@ -109,11 +112,13 @@ export function usePitchDetection() {
 
       rafRef.current = requestAnimationFrame(analyze);
     } catch (err) {
-      const msg =
+      // Handle AudioCompatError with structured codes
+      const msg = err.code ? err.message : (
         err.name === 'NotFoundError'   ? 'No microphone found on this device.' :
         err.name === 'NotAllowedError' ? 'Microphone permission denied. Allow access in your browser settings.' :
-        'Could not start microphone.';
-      setState(prev => ({ ...prev, hasPermission: false, error: msg, isListening: false }));
+        'Could not start microphone.'
+      );
+      setState(prev => ({ ...prev, hasPermission: false, error: msg, isListening: false, errorObject: err }));
     }
   }, [analyze]);
 

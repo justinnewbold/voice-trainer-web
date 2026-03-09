@@ -35,7 +35,7 @@ function useSessionTimer() {
   return { seconds, running, start, stop, reset, fmt };
 }
 
-export default function HomeScreen({ onNav, theme, toggleTheme }) {
+export default function HomeScreen({ onNav, theme, toggleTheme, onSettings, pwaPrompt, onInstallPwa }) {
   const [progress, setProgress] = useState(null);
   const [range, setRange] = useState(null);
   const [notifGranted, setNotifGranted] = useState(false);
@@ -83,13 +83,23 @@ export default function HomeScreen({ onNav, theme, toggleTheme }) {
               Sing Better,<br /><span style={{ color: 'var(--primary-light)' }}>Every Day.</span>
             </h1>
           </div>
-          {/* Theme toggle */}
-          <button onClick={toggleTheme} style={{
-            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
-            padding: '8px 12px', fontSize: 18, cursor: 'pointer', marginTop: 8,
-          }}>
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
+          {/* Theme + Settings */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={toggleTheme} style={{
+              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
+              padding: '8px 12px', fontSize: 18, cursor: 'pointer', marginTop: 8,
+            }}>
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+            {onSettings && (
+              <button onClick={onSettings} style={{
+                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
+                padding: '8px 12px', fontSize: 18, cursor: 'pointer', marginTop: 8,
+              }}>
+                ⚙️
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -183,6 +193,24 @@ export default function HomeScreen({ onNav, theme, toggleTheme }) {
           ))}
         </div>
       </div>
+
+      {/* PWA Install CTA */}
+      {pwaPrompt && (
+        <div style={{ padding: '16px 16px 0' }}>
+          <button onClick={onInstallPwa} style={{
+            width: '100%', background: 'linear-gradient(135deg, #7c3aed, #5b21b6)',
+            border: 'none', borderRadius: 14, padding: '14px 16px', display: 'flex',
+            alignItems: 'center', gap: 10, cursor: 'pointer',
+          }}>
+            <span style={{ fontSize: 22 }}>📱</span>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Install Voice Trainer</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>Add to home screen for the best experience</div>
+            </div>
+            <span style={{ fontSize: 11, color: '#fff', fontWeight: 700 }}>INSTALL →</span>
+          </button>
+        </div>
+      )}
 
       {/* Notification CTA */}
       {!notifGranted && 'Notification' in window && (

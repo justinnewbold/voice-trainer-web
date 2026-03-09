@@ -10,6 +10,7 @@
   --text-1: #f1f5f9; --text: #f1f5f9; --text-2: #94a3b8; --text-3: #475569;
   --font-mono: 'Space Mono', monospace; --font-sans: 'DM Sans', sans-serif;
   --radius: 12px; --radius-lg: 20px; --radius-xl: 28px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 [data-theme="light"] {
@@ -21,7 +22,7 @@
 }
 
 html { color-scheme: dark; }
-[data-theme="light"] html { color-scheme: light; }
+[data-theme="light"] { color-scheme: light; }
 
 body {
   background: var(--bg); color: var(--text-1); font-family: var(--font-sans);
