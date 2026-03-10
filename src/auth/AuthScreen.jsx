@@ -7,8 +7,8 @@ import React, { useState } from 'react';
  *   auth       — the return value of useAuth()
  *   onDevBypass — if provided, renders a dev bypass button
  */
-export default function AuthScreen({ auth, onDevBypass }) {
-  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot' | 'reset' | 'check-email'
+export default function AuthScreen({ auth, onDevBypass, forceMode, onResetComplete }) {
+  const [mode, setMode] = useState(forceMode || 'login'); // 'login' | 'signup' | 'forgot' | 'reset' | 'check-email'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -58,6 +58,9 @@ export default function AuthScreen({ auth, onDevBypass }) {
         const result = await auth.updatePassword(newPassword);
         if (result?.error) return;
         setMessage({ type: 'success', text: 'Password updated! You can now use the app.' });
+        if (onResetComplete) {
+          setTimeout(() => onResetComplete(), 2000);
+        }
       }
     } finally {
       setSubmitting(false);

@@ -35,7 +35,7 @@ function useSessionTimer() {
   return { seconds, running, start, stop, reset, fmt };
 }
 
-export default function HomeScreen({ onNav, theme, toggleTheme, onSettings, pwaPrompt, onInstallPwa }) {
+export default function HomeScreen({ onNav, theme, toggleTheme, onSettings, pwaPrompt, onInstallPwa, auth }) {
   const [progress, setProgress] = useState(null);
   const [range, setRange] = useState(null);
   const [notifGranted, setNotifGranted] = useState(false);
@@ -82,6 +82,11 @@ export default function HomeScreen({ onNav, theme, toggleTheme, onSettings, pwaP
             <h1 style={{ fontSize: 36, fontWeight: 900, lineHeight: 1.1, marginBottom: 10 }}>
               Sing Better,<br /><span style={{ color: 'var(--primary-light)' }}>Every Day.</span>
             </h1>
+            {auth?.isAuthenticated && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--green-dim)', border: '1px solid var(--green)', borderRadius: 20, padding: '4px 10px', fontSize: 11, color: 'var(--green)', fontWeight: 600 }}>
+                ☁️ Synced{auth.user?.email ? ` · ${auth.user.email}` : ''}
+              </div>
+            )}
           </div>
           {/* Theme + Settings */}
           <div style={{ display: 'flex', gap: 8 }}>
@@ -225,6 +230,26 @@ export default function HomeScreen({ onNav, theme, toggleTheme, onSettings, pwaP
               <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Get nudged to practice every day</div>
             </div>
             <span style={{ fontSize: 11, color: 'var(--primary-light)', fontWeight: 700 }}>ENABLE →</span>
+          </button>
+        </div>
+      )}
+
+      {/* Cloud Sync CTA — only show if not signed in */}
+      {auth && !auth.isAuthenticated && (
+        <div style={{ padding: '16px 16px 0' }}>
+          <button onClick={() => {
+            try { localStorage.removeItem('vt_dev_bypass'); } catch {}
+            window.location.reload();
+          }} style={{
+            width: '100%', background: 'var(--surface)', border: '1px solid var(--primary-dim)',
+            borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+          }}>
+            <span style={{ fontSize: 22 }}>☁️</span>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>Sign In for Cloud Sync</div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Sync your progress across all your devices</div>
+            </div>
+            <span style={{ fontSize: 11, color: 'var(--primary-light)', fontWeight: 700 }}>SIGN IN →</span>
           </button>
         </div>
       )}

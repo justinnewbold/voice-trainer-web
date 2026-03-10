@@ -99,6 +99,18 @@ export default function AuthGate({ children }) {
     );
   }
 
+  // Password recovery flow — user clicked a reset link and is now authenticated
+  // but needs to set a new password before continuing
+  if (auth.passwordRecovery) {
+    return (
+      <AuthScreen
+        auth={auth}
+        forceMode="reset"
+        onResetComplete={() => auth.clearPasswordRecovery()}
+      />
+    );
+  }
+
   // Authenticated → sync then render
   return (
     <SyncWrapper auth={auth} onSynced={() => setSynced(true)}>

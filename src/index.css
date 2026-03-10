@@ -17,7 +17,7 @@
   --bg: #f8fafc; --bg2: #f1f5f9; --surface: #ffffff; --surface-2: #f1f5f9; --card: #ffffff;
   --border: #e2e8f0; --border-glow: #7c3aed30;
   --primary: #7c3aed; --primary-light: #7c3aed; --primary-dim: #7c3aed15;
-  --cyan: #0284c7; --green: #059669; --amber: #d97706; --red: #dc2626;
+  --cyan: #0284c7; --cyan-dim: #0284c720; --green: #059669; --green-dim: #05966920; --amber: #d97706; --amber-dim: #d9770620; --red: #dc2626; --red-dim: #dc262620;
   --text-1: #0f172a; --text: #0f172a; --text-2: #475569; --text-3: #94a3b8;
 }
 

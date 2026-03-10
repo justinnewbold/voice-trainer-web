@@ -112,7 +112,7 @@ export default function App() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative' }}>
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 72 }}>
-        {tab === 'home'     && <HomeScreen onNav={setTab} theme={theme} toggleTheme={toggleTheme} onSettings={() => setShowSettings(true)} pwaPrompt={pwaPrompt} onInstallPwa={handleInstallPwa} />}
+        {tab === 'home'     && <HomeScreen onNav={setTab} theme={theme} toggleTheme={toggleTheme} onSettings={() => setShowSettings(true)} pwaPrompt={pwaPrompt} onInstallPwa={handleInstallPwa} auth={auth} />}
         {tab === 'warmup'   && <WarmupScreen />}
         {tab === 'range'    && <VocalRangeScreen />}
         {tab === 'pitch'    && <PitchScreen />}
@@ -216,7 +216,10 @@ function SettingsScreen({ onBack, theme, toggleTheme, pwaPrompt, onInstallPwa, a
         <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 16, marginTop: 8 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', marginBottom: 8 }}>About Voice Trainer</div>
           <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.7 }}>
-            All audio is processed locally on your device — nothing is uploaded. Your data lives in browser local storage. Use Export Data to back it up.
+            All audio is processed locally on your device — nothing is uploaded.
+            {auth?.isAuthenticated
+              ? ' Your progress is synced to the cloud via your account, and also saved locally as a backup.'
+              : ' Your data lives in browser local storage. Sign in to sync across devices, or use Export Data to back it up.'}
           </div>
         </div>
       </div>

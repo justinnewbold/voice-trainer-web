@@ -27,6 +27,7 @@ export function useAuth() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const mountedRef = useRef(true);
 
   // ── Helpers ─────────────────────────────────────────────────────────────
@@ -85,6 +86,9 @@ export function useAuth() {
 
         if (event === 'SIGNED_IN' && s?.user) {
           await fetchProfile(s.user.id);
+        }
+        if (event === 'PASSWORD_RECOVERY') {
+          safeSet(setPasswordRecovery, true);
         }
         if (event === 'SIGNED_OUT') {
           safeSet(setProfile, null);
@@ -238,6 +242,8 @@ export function useAuth() {
     loading,
     error,
     isAuthenticated: !!session,
+    passwordRecovery,
+    clearPasswordRecovery: () => setPasswordRecovery(false),
     signUp,
     signIn,
     signInWithMagicLink,
