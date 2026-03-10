@@ -1,5 +1,22 @@
 const KEY = 'vt_progress_v1';
 
+// Lazy import to avoid circular deps — will be null if auth not configured
+let _pushProgress = null;
+let _supabase = null;
+async function getSyncDeps() {
+  if (_pushProgress === null) {
+    try {
+      const sync = await import('../auth/syncService.js');
+      const client = await import('../auth/supabaseClient.js');
+      _pushProgress = sync.pushProgress;
+      _supabase = client.supabase;
+    } catch {
+      _pushProgress = false; // mark as unavailable
+    }
+  }
+  return { pushProgress: _pushProgress || null, supabase: _supabase };
+}
+
 export const defaultProgress = {
   totalSessions: 0,
   totalMinutes: 0,
@@ -52,6 +69,16 @@ export function saveSession(session) {
   }
 
   try { localStorage.setItem(KEY, JSON.stringify(p)); } catch {}
+
+  // Push to Supabase if authenticated (non-blocking)
+  getSyncDeps().then(({ pushProgress, supabase }) => {
+    if (pushProgress && supabase) {
+      supabase.auth.getUser().then(({ data }) => {
+        if (data?.user) pushProgress(data.user.id, p);
+      }).catch(() => {});
+    }
+  });
+
   return { ...p, xpGained };
 }
 

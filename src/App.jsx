@@ -10,6 +10,8 @@ import OnboardingScreen, { hasCompletedOnboarding } from './screens/OnboardingSc
 import { BrowserNotSupported } from './components/ErrorStates.jsx';
 import { detectAudioSupport } from './utils/audioCompat.js';
 import { downloadExport, importData } from './utils/storage.js';
+import { useAuth } from './auth/useAuth.js';
+import ProfileScreen from './auth/ProfileScreen.jsx';
 
 const NAV = [
   { id: 'home',     label: 'Home',    icon: HomeIcon },
@@ -24,7 +26,9 @@ export default function App() {
   const [tab, setTab] = useState('home');
   const [showOnboarding, setShowOnboarding] = useState(() => !hasCompletedOnboarding());
   const [showSettings, setShowSettings] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [pwaPrompt, setPwaPrompt] = useState(null);
+  const auth = useAuth();
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem('vt_theme') || 'dark'; } catch { return 'dark'; }
   });
@@ -85,10 +89,20 @@ export default function App() {
 
   // Settings
   if (showSettings) {
+    if (showProfile) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative' }}>
+          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 72 }}>
+            <ProfileScreen auth={auth} onBack={() => setShowProfile(false)} />
+          </div>
+          <BottomNav tab="home" setTab={(t) => { setShowSettings(false); setShowProfile(false); setTab(t); }} theme={theme} />
+        </div>
+      );
+    }
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative' }}>
         <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 72 }}>
-          <SettingsScreen onBack={() => setShowSettings(false)} theme={theme} toggleTheme={toggleTheme} pwaPrompt={pwaPrompt} onInstallPwa={handleInstallPwa} />
+          <SettingsScreen onBack={() => setShowSettings(false)} theme={theme} toggleTheme={toggleTheme} pwaPrompt={pwaPrompt} onInstallPwa={handleInstallPwa} auth={auth} onShowProfile={() => setShowProfile(true)} />
         </div>
         <BottomNav tab="home" setTab={(t) => { setShowSettings(false); setTab(t); }} theme={theme} />
       </div>
@@ -142,7 +156,7 @@ function BottomNav({ tab, setTab, theme }) {
 }
 
 // ─── Settings Screen ────────────────────────────────────────────────────────
-function SettingsScreen({ onBack, theme, toggleTheme, pwaPrompt, onInstallPwa }) {
+function SettingsScreen({ onBack, theme, toggleTheme, pwaPrompt, onInstallPwa, auth, onShowProfile }) {
   const [importStatus, setImportStatus] = useState(null);
   const fileRef = useRef(null);
 
@@ -174,6 +188,12 @@ function SettingsScreen({ onBack, theme, toggleTheme, pwaPrompt, onInstallPwa })
         </div>
       </div>
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {auth?.isAuthenticated && (
+          <SettingsRow icon="👤" title="My Account" sub={auth.user?.email || 'Manage your account'} onClick={onShowProfile} accent />
+        )}
+        {!auth?.isAuthenticated && auth?.user === null && (
+          <SettingsRow icon="☁️" title="Sign In to Sync" sub="Create an account to sync across devices" onClick={() => { try { localStorage.removeItem('vt_dev_bypass'); } catch {} window.location.reload(); }} />
+        )}
         <SettingsRow icon={theme === 'dark' ? '🌙' : '☀️'} title={`Theme: ${theme === 'dark' ? 'Dark' : 'Light'}`} sub="Toggle light/dark mode" onClick={toggleTheme} />
         {pwaPrompt && <SettingsRow icon="📱" title="Install App" sub="Add to your home screen" onClick={onInstallPwa} accent />}
         <SettingsRow icon="💾" title="Export Data" sub="Download a backup of all your progress" onClick={downloadExport} />

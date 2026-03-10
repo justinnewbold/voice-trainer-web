@@ -259,6 +259,17 @@ export default function VocalRangeScreen() {
     const rangeData = { lowNote: lowNote?.name, highNote: highNote?.name, voiceType: vt?.id, semitones, testedAt: Date.now() };
     try { localStorage.setItem('vt_range', JSON.stringify(rangeData)); } catch(e) {}
 
+    // Push to Supabase if authenticated (non-blocking)
+    import('../auth/syncService.js').then(({ pushVocalRange }) => {
+      import('../auth/supabaseClient.js').then(({ supabase }) => {
+        if (supabase) {
+          supabase.auth.getUser().then(({ data }) => {
+            if (data?.user) pushVocalRange(data.user.id, rangeData);
+          }).catch(() => {});
+        }
+      });
+    }).catch(() => {});
+
     return (
       <div style={{ padding: '24px 20px 80px', display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center', textAlign: 'center' }}>
         <div style={{ fontSize: 64 }}>🎉</div>
